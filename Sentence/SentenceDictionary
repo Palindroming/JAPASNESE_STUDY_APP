@@ -1,0 +1,404 @@
+  
+  <!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&family=Zen+Maru+Gothic&display=swap" rel="stylesheet">
+Noto
+  <title>JP-KR Sentence Trainer — IndexedDB Edition</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --muted:#1f2937; --soft:#374151; --text:#e5e7eb; --sub:#9ca3af; --primary:#60a5fa; --accent:#34d399; --danger:#f87171; --warn:#fbbf24; --shadow: 0 10px 30px rgb(0 0 0 / 0.35); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:linear-gradient(180deg, var(--bg), #030712 50% 100%); color:var(--text); font:16px/1.5  "Zen Maru Gothic";}
+
+    header{position:sticky; top:0; z-index:5; backdrop-filter: blur(6px); background:linear-gradient(180deg, rgba(2,6,23,.9), rgba(2,6,23,.65)); border-bottom:1px solid #111827; padding:14px 20px; display:flex; align-items:center; gap:16px;}
+    .logo{font-weight:800; letter-spacing:.3px}
+    .logo b{color:var(--primary)}
+    .tag{font-size:12px; padding:2px 8px; border:1px solid var(--soft); border-radius:999px; color:var(--sub)}
+    .container{max-width:1100px; margin:18px auto; padding:0 16px}
+    .tabs{display:flex; gap:8px; flex-wrap:wrap}
+    .tab{background:var(--muted); color:var(--text); border:none; padding:10px 14px; border-radius:12px; cursor:pointer; box-shadow: var(--shadow); transition:transform .06s ease, background .2s;}
+    .tab:hover{transform:translateY(-1px)}
+    .tab.active{background:var(--primary); color:#0b1020}
+    .grid{display:grid; grid-template-columns: 1.1fr 1fr; gap:18px; margin-top:18px}
+    #in-jp, #in-ko{font: "Zen Maru Gothic"; font-size: 16px;}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+    .card{background:var(--panel); border:1px solid var(--muted); border-radius:var(--radius); box-shadow:var(--shadow)}
+    .card .hd{padding:14px 16px; border-bottom:1px solid var(--muted); display:flex; align-items:center; justify-content:space-between}
+    .card .bd{padding:16px}
+    input[type="text"], input[type="date"], textarea, select{width:100%; padding:12px 14px; background: #0b1220; color:var(--text); border:1px solid var(--soft); border-radius:12px; outline:none; transition:border .15s}
+    textarea{min-height:94px; resize:vertical}
+    input:focus, textarea:focus, select:focus{border-color:var(--primary)}
+    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; border:1px solid var(--soft); background:#0b1220; color:var(--text); cursor:pointer}
+    .btn.primary{background:var(--primary); border-color:transparent; color:#071021; font-weight:700}
+    .btn.ghost{background:transparent}
+    .btn.danger{background:var(--danger); border-color:transparent; color:#2a0b0b}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px;}
+    th, td{padding:12px 10px; text-align:left}
+    thead th{font-size:13px; color:var(--sub); background:#0b1220; position:sticky; top:0}
+    tbody tr:nth-child(odd){background:#0b1220}
+    tbody tr:nth-child(even){background:#0e1627}
+    .calendar{display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; padding:12px}
+    .cal-header{display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; padding:12px; color:var(--sub); font-size:12px}
+    .day{border:1px solid var(--muted); border-radius:10px; padding:8px; min-height:84px; background:#0b1220; display:flex; flex-direction:column}
+    .day.today{border-color:var(--primary)}
+    .day .dnum{font-weight:700; color:var(--sub)}
+    .chip{margin-top:6px; font-size:11px; background:var(--muted); color:var(--sub); padding:2px 6px; border-radius:999px; align-self:flex-start}
+    .clickable{cursor:pointer; transition: transform .05s ease}
+    .clickable:hover{transform:translateY(-1px)}
+    .empty{opacity:.6; font-style:italic}
+    .test-wrap{max-width:780px; margin:0 auto}
+    .progress{height:10px; background:#0b1220; border:1px solid var(--soft); border-radius:999px; overflow:hidden}
+    .bar{height:100%; width:0%; background:linear-gradient(90deg, var(--primary), #22d3ee)}
+    .pill{display:inline-block; padding:2px 8px; border-radius:999px; background:#0b1220; border:1px solid var(--soft); color:var(--sub); font-size:12px}
+    .hint{color:var(--warn)}
+    .shake{animation:shake .2s ease-in-out 0s 2}
+    @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}100%{transform:translateX(0)}}
+    .fadeIn{animation:fadeIn .25s ease}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:translateY(0)}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">JP-KR <b>Trainer</b></div>
+    <span class="tag">Local · IndexedDB · Persistent</span>
+  </header>
+
+  <div class="container">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="record">기록(입력)</button>
+      <button class="tab" data-tab="table">표 보기</button>
+      <button class="tab" data-tab="calendar">캘린더</button>
+      <button class="tab" data-tab="test">테스트</button>
+    </div>
+
+    <section id="panel-record" class="grid" role="tabpanel">
+      <div class="card">
+        <div class="hd"><strong>문장 기록</strong><span class="pill">필수: 일본어·번역</span></div>
+        <div class="bd">
+          <div style="display:grid; grid-template-columns: 180px 1fr; gap:12px; align-items:center; margin-bottom:10px">
+            <label>날짜</label>
+            <input type="date" id="in-date" />
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr; gap:12px">
+            <div>
+              <label style="display:block; margin-bottom:6px; color:var(--sub)">일본어 문장</label>
+              <textarea id="in-jp" placeholder="例）昨日は雨が降りました。"></textarea>
+            </div>
+            <div>
+              <label style="display:block; margin-bottom:6px; color:var(--sub)">번역(한국어)</label>
+              <textarea id="in-ko" placeholder="예) 어제는 비가 내렸습니다."></textarea>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:12px">
+            <button class="btn primary" id="btn-add">추가</button>
+            <button class="btn ghost" id="btn-clear">입력 지우기</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><strong>오늘 등록 목록</strong><span id="today-count" class="pill">0개</span></div>
+        <div class="bd" id="today-list" class="fadeIn"></div>
+      </div>
+    </section>
+
+    <section id="panel-table" class="card" role="tabpanel" hidden>
+      <div class="hd"><strong>전체 표 보기</strong>
+        <div style="display:flex; gap:8px; align-items:center">
+          <input type="text" id="q" placeholder="검색: 일본어/번역/날짜" style="width:260px" />
+          <button class="btn" id="btn-export" title="JSON으로 내보내기">Export</button>
+          <label class="btn" for="import-file" title="JSON 불러오기">Import<input id="import-file" type="file" accept="application/json" hidden></label>
+        </div>
+      </div>
+      <div class="bd" style="overflow:auto; max-height:70vh">
+        <table id="tbl">
+          <thead>
+            <tr><th style="width:120px">날짜</th><th>일본어</th><th>번역</th><th style="width:140px">작업</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-calendar" class="grid" role="tabpanel" hidden>
+      <div class="card">
+        <div class="hd">
+          <strong>캘린더</strong>
+          <div style="display:flex; gap:6px; align-items:center">
+            <button class="btn" id="prev-month">◀</button>
+            <div id="month-label" style="min-width:160px; text-align:center"></div>
+            <button class="btn" id="next-month">▶</button>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="cal-header"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
+          <div class="calendar" id="calendar"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><strong id="day-title">선택한 날짜</strong></div>
+        <div class="bd" id="day-entries"><div class="empty">왼쪽 달력에서 날짜를 선택하세요.</div></div>
+      </div>
+    </section>
+
+    <section id="panel-test" class="card" role="tabpanel" hidden>
+      <div class="hd"><strong>테스트</strong><span class="pill">번역(한국어) → 일본어 입력</span></div>
+      <div class="bd">
+        <div class="test-setup">
+          <p style="color:var(--sub)">저장된 전체 문장 중 최대 20개를 무작위로 출제합니다.</p>
+          <button id="btn-start" class="btn primary">테스트 시작</button>
+        </div>
+
+        <div class="test-wrap" id="test-wrap" hidden>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px">
+            <div style="flex:1" class="progress"><div class="bar" id="bar"></div></div>
+            <div style="min-width:140px; text-align:right"><span id="idx">0</span>/<span id="total">0</span></div>
+          </div>
+
+          <div class="card" style="background:#0b1220; border-color:#0f223a">
+            <div class="bd">
+              <div style="color:var(--sub); font-size:12px; margin-bottom:6px">번역(정답 일본어를 입력)</div>
+              <div id="quiz-ko" style="font-size:20px; font-weight:700; margin-bottom:12px"></div>
+              <input id="ans" type="text" placeholder="일본어 문장을 정확히 입력" autocomplete="off" />
+              <div id="msg" style="min-height:24px; margin-top:8px"></div>
+              <div style="display:flex; gap:8px; margin-top:10px">
+                <button class="btn primary" id="btn-submit">확인</button>
+                <button class="btn" id="btn-hint">힌트</button>
+                <button class="btn ghost" id="btn-reveal">정답 보기</button>
+                <button class="btn danger" id="btn-end">종료</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="summary" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // =================== IndexedDB Storage ===================
+    const DB_NAME = 'jpkr_idb_v1';
+    const DB_VERSION = 1;
+    const STORE = 'sentences';
+    let _dbPromise;
+
+    function openDB(){
+      if(_dbPromise) return _dbPromise;
+      _dbPromise = new Promise((resolve, reject)=>{
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = ()=>{
+          const db = req.result;
+          if(!db.objectStoreNames.contains(STORE)){
+            const os = db.createObjectStore(STORE, { keyPath: 'id' });
+            os.createIndex('date', 'date', { unique:false });
+            os.createIndex('createdAt', 'createdAt', { unique:false });
+          }
+        };
+        req.onsuccess = ()=> resolve(req.result);
+        req.onerror = ()=> reject(req.error);
+      });
+      return _dbPromise;
+    }
+
+    async function idbGetAll(){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).getAll();
+        req.onsuccess = ()=> resolve(req.result || []);
+        req.onerror = ()=> reject(req.error);
+      });
+    }
+    async function idbAdd(e){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.oncomplete = ()=> resolve(e);
+        tx.onerror = ()=> reject(tx.error);
+        tx.objectStore(STORE).add(e);
+      });
+    }
+    async function idbPut(e){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.oncomplete = ()=> resolve(e);
+        tx.onerror = ()=> reject(tx.error);
+        tx.objectStore(STORE).put(e);
+      });
+    }
+    async function idbGet(id){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).get(id);
+        req.onsuccess = ()=> resolve(req.result || null);
+        req.onerror = ()=> reject(req.error);
+      });
+    }
+    async function idbDelete(id){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.oncomplete = ()=> resolve();
+        tx.onerror = ()=> reject(tx.error);
+        tx.objectStore(STORE).delete(id);
+      });
+    }
+    async function idbListByDate(date){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readonly');
+        const idx = tx.objectStore(STORE).index('date');
+        const req = idx.getAll(IDBKeyRange.only(date));
+        req.onsuccess = ()=> resolve(req.result || []);
+        req.onerror = ()=> reject(req.error);
+      });
+    }
+    async function idbCountByDate(date){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readonly');
+        const idx = tx.objectStore(STORE).index('date');
+        const req = idx.count(IDBKeyRange.only(date));
+        req.onsuccess = ()=> resolve(req.result || 0);
+        req.onerror = ()=> reject(req.error);
+      });
+    }
+    async function idbClear(){
+      const db = await openDB();
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.oncomplete = ()=> resolve();
+        tx.onerror = ()=> reject(tx.error);
+        tx.objectStore(STORE).clear();
+      });
+    }
+
+    // =================== Utilities ===================
+
+        function fmtDate(d) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      // 오늘 날짜 문자열 반환
+      function todayStr() {
+        return fmtDate(new Date());
+      }
+
+
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const byId = id => document.getElementById(id);
+    function uid(){ return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+    function normalizeJP(s){ if(!s) return ''; s = s.trim().replace(/\u3000/g,' ').replace(/\s+/g,' '); s = s.replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)); s = s.replace(/[。、．\.,!！?？「」『』（）()\[\]：:；;]/g, ''); return s; }
+    function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+
+    
+    // =================== Tabs ===================
+    const panels = { record: byId('panel-record'), table: byId('panel-table'), calendar: byId('panel-calendar'), test: byId('panel-test') };
+    $$('#tabs .tab').forEach(btn=>btn.addEventListener('click',()=>{ $$('#tabs .tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const t = btn.dataset.tab; Object.entries(panels).forEach(([k,el])=>{ el.hidden = (k!==t); }); if(t==='table') renderTable(); if(t==='calendar') renderCalendar(currentYear, currentMonth); }));
+
+    // =================== Record panel ===================
+    const inDate = byId('in-date');
+    const inJp = byId('in-jp');
+    const inKo = byId('in-ko');
+    inDate.value = todayStr();
+
+    async function addEntry({date, jp, ko}){ const e = { id: uid(), date, jp: jp.trim(), ko: ko.trim(), createdAt: Date.now() }; await idbAdd(e); return e; }
+    async function updateEntry(id, patch){ const cur = await idbGet(id); if(!cur) return; await idbPut({ ...cur, ...patch }); }
+    async function removeEntry(id){ await idbDelete(id); }
+    async function listByDate(date){ return await idbListByDate(date); }
+
+    async function renderTodayList(){ 
+    
+    const box = byId('today-list'); 
+    const today = inDate.value || todayStr(); 
+    const items = (await listByDate(today)).sort((a,b)=>a.createdAt-b.createdAt); 
+    byId('today-count').textContent = items.length + '개'; 
+    if(!items.length){ box.innerHTML = '<div class="empty">오늘 등록된 문장이 없습니다.</div>'; return; } 
+    box.innerHTML = items.map(x=>`<div class="card" style="border-color:#0f223a; background:#0b1220; margin-bottom:10px"><div class="bd"><div style="color:var(--sub); font-size:12px">${x.date}</div><div style="font-weight:700; margin-top:6px">${escapeHTML(x.jp)}</div><div style="opacity:.8; margin-top:4px">${escapeHTML(x.ko)}</div><div style="display:flex; gap:8px; margin-top:8px"><button class="btn" onclick="onEdit('${x.id}')">수정</button><button class="btn danger" onclick="onDelete('${x.id}')">삭제</button></div></div></div>`).join(''); }
+
+    byId('btn-add').addEventListener('click', async ()=>{ const date = inDate.value || todayStr(); const jp = inJp.value.trim(); const ko = inKo.value.trim(); if(!jp || !ko){ alert('일본어/번역을 모두 입력하세요.'); return; } await addEntry({date, jp, ko}); inJp.value=''; inKo.value=''; await renderTodayList(); await renderTable(); await renderCalendar(currentYear, currentMonth); });
+    byId('btn-clear').addEventListener('click', ()=>{ inJp.value=''; inKo.value=''; });
+
+
+
+
+
+
+
+
+
+
+
+
+    window.onEdit = async function(id){ const e = await idbGet(id); if(!e) return; const jp = prompt('일본어 수정', e.jp); if(jp===null) return; const ko = prompt('번역(한국어) 수정', e.ko); if(ko===null) return; await updateEntry(id, {jp, ko}); await renderTodayList(); await renderTable(); await renderCalendar(currentYear, currentMonth); await renderDayEntries(selectedDateStr); }
+    window.onDelete = async function(id){ if(!confirm('삭제할까요?')) return; await removeEntry(id); await renderTodayList(); await renderTable(); await renderCalendar(currentYear, currentMonth); await renderDayEntries(selectedDateStr); }
+
+    // =================== Table panel ===================
+    async function renderTable(){ const q = (byId('q').value||'').trim().toLowerCase(); const tb = byId('tbl').querySelector('tbody'); let arr = await idbGetAll(); if(q){ arr = arr.filter(x=> x.date.includes(q) || x.jp.toLowerCase().includes(q) || x.ko.toLowerCase().includes(q) ); } arr.sort((a,b)=> a.date===b.date ? a.createdAt-b.createdAt : (a.date<b.date?-1:1)); tb.innerHTML = arr.map(x=>`<tr><td>${x.date}</td><td>${escapeHTML(x.jp)}</td><td>${escapeHTML(x.ko)}</td><td><button class="btn" onclick="onEdit('${x.id}')">수정</button> <button class="btn danger" onclick="onDelete('${x.id}')">삭제</button></td></tr>`).join(''); }
+    byId('q').addEventListener('input', renderTable);
+
+    byId('btn-export').addEventListener('click', async ()=>{ const all = await idbGetAll(); const blob = new Blob([JSON.stringify(all, null, 2)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `jpkr-data-${todayStr()}.json`; a.click(); URL.revokeObjectURL(a.href); });
+    byId('import-file').addEventListener('change', async (e)=>{ const f = e.target.files[0]; if(!f) return; try{ const arr = JSON.parse(await f.text()); if(!Array.isArray(arr)) throw new Error('Invalid file'); await idbClear(); for(const x of arr){ if(!x.id) x.id = uid(); if(!x.createdAt) x.createdAt = Date.now(); await idbPut(x); } await renderTodayList(); await renderTable(); await renderCalendar(currentYear, currentMonth); await renderDayEntries(selectedDateStr); alert('불러오기 완료'); }catch(err){ alert('불러오기 실패: ' + err.message); } });
+
+    // =================== Calendar panel ===================
+
+
+
+    let current = new Date();
+    let currentYear = current.getFullYear();
+    let currentMonth = current.getMonth();
+    let selectedDateStr = '';
+
+    async function renderCalendar(y, m){ const monthLabel = byId('month-label'); monthLabel.textContent = `${y}년 ${m+1}월`; const first = new Date(y, m, 1); const startDay = first.getDay(); const daysInMonth = new Date(y, m+1, 0).getDate(); const cal = byId('calendar'); cal.innerHTML = ''; for(let i=0;i<startDay;i++) cal.appendChild(document.createElement('div')); for(let d=1; d<=daysInMonth; d++){ const cell = document.createElement('div'); cell.className = 'day clickable'; const dstr = fmtDate(new Date(y, m, d)); if(dstr === todayStr()) cell.classList.add('today'); const cnt = await idbCountByDate(dstr); cell.innerHTML = `<div class="dnum">${d}</div>` + (cnt?`<div class="chip">${cnt}개</div>`:''); cell.addEventListener('click', ()=>{ selectedDateStr = dstr; renderDayEntries(dstr); }); cal.appendChild(cell); } }
+
+    async function renderDayEntries(dateStr){ if(!dateStr){ byId('day-entries').innerHTML = '<div class="empty">왼쪽 달력에서 날짜를 선택하세요.</div>'; return; } byId('day-title').textContent = `${dateStr} 기록`; const items = await listByDate(dateStr); const box = byId('day-entries'); if(!items.length){ box.innerHTML = '<div class="empty">기록이 없습니다.</div>'; return; } box.innerHTML = items.map(x=>`<div class="card" style="border-color:#0f223a; background:#0b1220; margin-bottom:10px"><div class="bd"><div style="font-weight:700">${escapeHTML(x.jp)}</div><div style="opacity:.8; margin-top:4px">${escapeHTML(x.ko)}</div><div style="display:flex; gap:8px; margin-top:8px"><button class="btn" onclick="onEdit('${x.id}')">수정</button><button class="btn danger" onclick="onDelete('${x.id}')">삭제</button></div></div></div>`).join(''); }
+
+    byId('prev-month').addEventListener('click', async ()=>{ if(currentMonth===0){ currentMonth=11; currentYear--; } else currentMonth--; await renderCalendar(currentYear, currentMonth); });
+    byId('next-month').addEventListener('click', async ()=>{ if(currentMonth===11){ currentMonth=0; currentYear++; } else currentMonth++; await renderCalendar(currentYear, currentMonth); });
+
+    // =================== Test (random 20 from ALL) ===================
+    function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]] = [arr[j],arr[i]]; } return arr; }
+    async function pickRandom20(){ const all = await idbGetAll(); return shuffle(all.slice()).slice(0,20); }
+
+    let QUIZ = []; let idx=0; let correct=0;
+
+    async function startTest(){ QUIZ = await pickRandom20(); idx = 0; correct = 0; byId('total').textContent = QUIZ.length; if(QUIZ.length===0){ alert('데이터가 없습니다. 먼저 문장을 기록하세요.'); return; } $('.test-setup').hidden = true; $('#test-wrap').hidden = false; nextItem(); }
+    function nextItem(){ if(idx>=QUIZ.length){ return finishTest(); } const q = QUIZ[idx]; byId('quiz-ko').textContent = q.ko; byId('ans').value = ''; byId('msg').textContent=''; byId('idx').textContent = (idx+1); updateBar(); byId('ans').focus(); }
+    function updateBar(){ const pct = QUIZ.length? Math.round((idx)/QUIZ.length*100) : 0; byId('bar').style.width = pct + '%'; }
+    function showMsg(t, type){ const m = byId('msg'); m.textContent = t; m.style.color = type==='ok'? 'var(--accent)' : type==='bad'? 'var(--danger)' : 'var(--warn)'; }
+    function submitAns(){ const q = QUIZ[idx]; if(!q) return; const user = normalizeJP(byId('ans').value); const gold = normalizeJP(q.jp); if(!user){ showMsg('문장을 입력하세요.', 'warn'); byId('ans').classList.add('shake'); setTimeout(()=>byId('ans').classList.remove('shake'), 250); return; } if(user===gold){ showMsg('정답! 잘했어요 👍', 'ok'); correct++; idx++; setTimeout(nextItem, 350); } else { showMsg('틀렸어요. 다시 시도!', 'bad'); byId('ans').classList.add('shake'); setTimeout(()=>byId('ans').classList.remove('shake'), 250); } }
+    function showHint(){ const q = QUIZ[idx]; if(!q) return; const jp = q.jp.trim(); const hint = jp.length<=4? jp[0] : jp.slice(0, Math.ceil(jp.length/3)) + '…'; byId('msg').innerHTML = `<span class="hint">힌트: ${escapeHTML(hint)}</span>`; }
+    function reveal(){ const q = QUIZ[idx]; if(!q) return; byId('msg').innerHTML = `<span class="hint">정답: ${escapeHTML(q.jp)}</span>`; }
+    function finishTest(){ byId('bar').style.width = '100%'; const total = QUIZ.length; const wrap = byId('summary'); wrap.innerHTML = `<div class="card" style="border-color:#1f2937"><div class="bd"><div style="font-weight:800; font-size:20px; margin-bottom:8px">완료!</div><div>점수: <b>${correct}</b> / ${total}</div><div style="color:var(--sub)">정답률 ${(total? Math.round(correct/total*100):0)}%</div><div style="margin-top:10px; display:flex; gap:8px"><button class="btn" onclick="restartTest()">다시 시작</button><button class="btn ghost" onclick="exitTest()">종료</button></div></div></div>`; }
+    function restartTest(){ $('.test-setup').hidden = false; $('#test-wrap').hidden = true; byId('summary').innerHTML = ''; }
+    function exitTest(){ restartTest(); }
+
+    byId('btn-start').addEventListener('click', startTest);
+    byId('btn-submit').addEventListener('click', submitAns);
+    byId('btn-hint').addEventListener('click', showHint);
+    byId('btn-reveal').addEventListener('click', reveal);
+    byId('btn-end').addEventListener('click', exitTest);
+    byId('ans').addEventListener('keydown', e=>{ if(e.key==='Enter') submitAns(); });
+
+    // Init
+    (async function(){ await openDB(); await renderTodayList(); await renderTable(); await renderCalendar(currentYear, currentMonth); })();
+  </script>
+</body>
+</html>
